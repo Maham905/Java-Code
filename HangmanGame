@@ -1,0 +1,128 @@
+document.addEventListener("DOMContentLoaded", () => {
+  // Import words from external file (assuming it's imported in HTML)
+  const words = wordList;
+
+  // Query Selectors
+  const wordText = document.querySelector(".word"),
+    hintText = document.querySelector(".hint span"),
+    timeText = document.querySelector(".time b"),
+    inputField = document.querySelector("input"),
+    refreshBtn = document.querySelector(".refresh-word"),
+    checkBtn = document.querySelector(".check-word");
+  const messageElement = document.getElementById("message");
+  const scoreText = document.querySelector(".score b");
+
+  let score = 0;
+  let correctWord;
+  let hiddenWord;
+  let incorrectGuesses = 0;
+  let timer;
+
+  // Timer Initialization Function
+  // Concurrency and Concurrency Management: The timer logic ensures that the countdown runs concurrently with the game logic.
+  const initTimer = (maxTime) => {
+    clearInterval(timer);
+    timer = setInterval(() => {
+      if (maxTime > 0) {
+        maxTime--;
+        timeText.innerText = maxTime;
+      } else {
+        clearInterval(timer);
+        messageElement.innerHTML = `Time off! The correct word was <span style="color: #39A7FF; background-color: #EEF5FF;">${correctWord.toUpperCase()}</span>`;
+        inputField.style.display = "none";
+        setTimeout(() => {
+          initGame();
+          inputField.style.display = "block";
+        }, 1500);
+      }
+    }, 1000);
+  };
+
+  // Game Initialization Function
+  // Refactoring: Code is modularized into small functions for clarity and reusability.
+  const initGame = () => {
+    initTimer(60);
+    incorrectGuesses = 0;
+    const randomIndex = Math.floor(Math.random() * words.length);
+    const randomObj = words[randomIndex];
+    correctWord = randomObj.word.toLowerCase();
+    hiddenWord = correctWord
+      .split("")
+      .map(letter => "aeiou".includes(letter) ? letter : "_")
+      .join(" ");
+    wordText.innerText = hiddenWord;
+    hintText.innerText = randomObj.hint;
+    inputField.value = "";
+    inputField.setAttribute("maxlength", 1);
+    inputField.className = "";
+    messageElement.textContent = "";
+  };
+
+  // Update Word Display Function
+  const updateWordDisplay = () => {
+    const displayWord = correctWord
+      .split("")
+      .map(letter => (hiddenWord.includes(letter) ? letter : "_"))
+      .join(" ");
+    wordText.innerText = displayWord;
+    return displayWord;
+  };
+
+  // Check Letter Function
+  // Exception Handling: The try-catch block handles user input errors.
+  const checkLetter = () => {
+    try {
+      const userLetter = inputField.value.toLowerCase();
+      if (!userLetter) {
+        throw new Error("Please enter a letter to check!");
+      }
+      if (!correctWord.includes(userLetter)) {
+        incorrectGuesses++;
+        messageElement.textContent = `Incorrect guess! You have ${6 - incorrectGuesses} guesses left.`;
+        if (incorrectGuesses >= 6) {
+          messageElement.innerHTML = `Game Over! The correct word was <span style="color: #39A7FF; background-color: #EEF5FF;">${correctWord.toUpperCase()}</span>`;
+          clearInterval(timer);
+          setTimeout(initGame, 1500);
+          return;
+        }
+      } else {
+        hiddenWord = correctWord
+          .split("")
+          .map(letter => (hiddenWord.includes(letter) || letter === userLetter ? letter : "_"))
+          .join("");
+        wordText.innerText = hiddenWord.split("").join(" ");
+        if (!hiddenWord.includes("_")) {
+          messageElement.textContent = `Congratulations! You guessed the word ${correctWord.toUpperCase()} correctly!`;
+          score += 10;
+          scoreText.innerText = score;
+          clearInterval(timer);
+          setTimeout(initGame, 2000);
+          return;
+        }
+      }
+      inputField.value = "";
+      inputField.focus();
+    } catch (error) {
+      messageElement.textContent = error.message;
+      inputField.classList.add("flash");
+      setTimeout(() => {
+        inputField.classList.remove("flash");
+        messageElement.textContent = "";
+      }, 2000);
+    }
+  };
+
+  // Event Listeners
+  refreshBtn.addEventListener("click", initGame);
+  checkBtn.addEventListener("click", checkLetter);
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      checkLetter();
+    }
+  });
+
+  // Initialize Game
+  // Mutability and Immutability: Immutable operations are used, such as using const for constants and creating new arrays with split and map.
+  initGame();
+});
